@@ -44,7 +44,7 @@ spells you've learned.
 ## Important notes for Forever
 - Forever can hide combat data from addons, like rage/energy/mana, auras, cooldowns and target health.
   When that happens LevelCoach tracks your own casts instead: cooldowns from the time you last cast,
-  buffs and dots from their normal duration, and combo points from your builders and finishers. The
+  buffs and dots from their normal duration, and combo points from your builders and finishers.
   While the game hides your rage/energy/mana, the text under the icon shows an estimate instead:
   `~45` is a best guess (last real value plus energy regen, minus what you've spent), `30+` means you
   can afford a 30-cost ability but nothing pricier, and `<15` means you're short of your cheapest one.
