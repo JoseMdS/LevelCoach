@@ -1,4 +1,5 @@
 local _, ns = ...
+if ns.playerClass ~= "SHAMAN" then return end -- other classes never build this spec
 local Ready, ReadyAny, Known, HasBuff = ns.Ready, ns.ReadyAny, ns.Known, ns.HasBuff
 
 local function MissingImbue()
@@ -39,7 +40,8 @@ ns.RegisterSpec{
 
         if not ns.InMelee() then
             -- Pull from range
-            if mw >= 5 or not ns.InCombat() then
+            -- Each Maelstrom stack cuts cast time and mana cost by 20%, so 3+ stacks already make a quick bolt
+            if mw >= 3 or not ns.InCombat() then
                 if Ready("Lightning Bolt") then return "Lightning Bolt" end
             end
             if ns.Debuff("Flame Shock") == 0 and Ready("Flame Shock") then return "Flame Shock" end
@@ -74,6 +76,11 @@ ns.RegisterSpec{
                 local air = ReadyAny("Windfury Totem", "Grace of Air Totem")
                 if air then return air end
             end
+        end
+        -- 3-4 Maelstrom stacks: 60-80% faster and cheaper, worth spending rather than waiting for 5
+        if mw >= 3 and mana > 15 then
+            local spell = (enemies >= 2 and Ready("Chain Lightning")) and "Chain Lightning" or ReadyAny("Lightning Bolt")
+            if spell then return spell end
         end
         if mana > 30 then
             -- With Stormstrike: Earth Shock right after it (shared shock cooldown). Before that: Flame Shock dot.

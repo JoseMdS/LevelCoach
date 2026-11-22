@@ -20,8 +20,17 @@ local db
 ---------------------------------------------------------------------------
 -- Keybind lookup
 ---------------------------------------------------------------------------
+-- The main bar (ACTIONBUTTON1-12) shows a different page of slots depending on state: slots 1-12
+-- normally, the selected page when paged, or the stance/form/stealth bar (slots 73-120).
+local function MainBarFirst()
+    local page = GetActionBarPage and GetActionBarPage() or 1
+    local bonus = GetBonusBarOffset and GetBonusBarOffset() or 0
+    if bonus > 0 and page == 1 then return (6 + bonus - 1) * 12 + 1 end
+    return (page - 1) * 12 + 1
+end
+
 local BAR_BINDINGS = {
-    { first = 1,  prefix = "ACTIONBUTTON" },
+    { first = 1,  prefix = "ACTIONBUTTON", main = true },
     { first = 25, prefix = "MULTIACTIONBAR3BUTTON" },
     { first = 37, prefix = "MULTIACTIONBAR4BUTTON" },
     { first = 49, prefix = "MULTIACTIONBAR2BUTTON" },
@@ -59,6 +68,7 @@ local function KeybindFor(spell)
     local result = false
     local slots = SlotsFor(spell)
     if slots then
+        BAR_BINDINGS[1].first = MainBarFirst()
         for _, slot in ipairs(slots) do
             for _, bar in ipairs(BAR_BINDINGS) do
                 if slot >= bar.first and slot < bar.first + 12 then
@@ -309,7 +319,12 @@ events:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" then
         if arg1 ~= ADDON then return end
         self:UnregisterEvent("ADDON_LOADED")
-        if not ns.specs[ns.playerClass] then return end -- class not supported: never do anything
+        if not ns.specs[ns.playerClass] then -- class not supported: never do anything
+            ns.Shutdown()
+            self:SetScript("OnEvent", nil)
+            frame:Hide()
+            return
+        end
         LevelCoachDB = LevelCoachDB or {}
         for k, v in pairs(defaults) do
             if LevelCoachDB[k] == nil then LevelCoachDB[k] = v end
@@ -322,13 +337,15 @@ events:SetScript("OnEvent", function(self, event, arg1)
         for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_LEVEL_UP", "SPELLS_CHANGED", "LEARNED_SPELL_IN_TAB",
                              "CHARACTER_POINTS_CHANGED", "PLAYER_TALENT_UPDATE", "ACTIVE_TALENT_GROUP_CHANGED",
                              "UPDATE_SHAPESHIFT_FORM", "UPDATE_SHAPESHIFT_FORMS", "ACTIONBAR_SLOT_CHANGED",
-                             "UPDATE_BINDINGS" }) do
+                             "UPDATE_BINDINGS", "UPDATE_BONUS_ACTIONBAR", "ACTIONBAR_PAGE_CHANGED" }) do
             pcall(self.RegisterEvent, self, e)
         end
         ns.ScanSpellbook()
         Evaluate()
-    elseif event == "ACTIONBAR_SLOT_CHANGED" or event == "UPDATE_BINDINGS" then
+    elseif event == "ACTIONBAR_SLOT_CHANGED" or event == "UPDATE_BINDINGS"
+        or event == "UPDATE_BONUS_ACTIONBAR" or event == "ACTIONBAR_PAGE_CHANGED" then
         wipe(keyCache)
+        Evaluate()
     else
         if event == "SPELLS_CHANGED" or event == "LEARNED_SPELL_IN_TAB" or event == "PLAYER_ENTERING_WORLD" then
             ns.ScanSpellbook()
@@ -414,8 +431,12 @@ SlashCmdList.LEVELCOACH = function(msg)
         db.twist = not db.twist
         Print("twisting " .. (db.twist and "on: seal twisting (Ret, needs Seal of Command and a slow weapon) and "
             .. "totem twisting (Enhancement, Windfury + Grace of Air)" or "off"))
+        if db.twist and not ns.swingAvailable then
+            Print("seal twisting needs the swing timer, which this client doesn't allow; only totem twisting will work")
+        end
     elseif cmd == "swing" then
         db.showSwing = not db.showSwing; Print("swing timer " .. (db.showSwing and "on" or "off"))
+        if not ns.swingAvailable then Print("the swing timer is unavailable on this client (it blocks the combat log)") end
     elseif cmd == "keys" then
         db.showKeybinds = not db.showKeybinds; Print("keybinds " .. (db.showKeybinds and "on" or "off"))
     elseif cmd == "always" then
@@ -463,8 +484,8 @@ SlashCmdList.LEVELCOACH = function(msg)
             .. "  (spec setting: " .. db.spec .. ", rotation: " .. (ns.Endgame() and "endgame" or "leveling")
             .. ", /lc mode " .. db.mode .. ")")
         Print("/lc lock | unlock | scale 0.5-3 | cds | keys | swing | twist | mode | always | debug | reset")
-        Print("/lc spells (what it found) | talents | shred | spec auto|fury|protwarrior|assassination|outlaw|enhancement|"
-            .. "retribution|protpaladin|cat|bear")
+        Print("/lc spells (what it found) | talents | shred | spec auto|fury|protwarrior|assassination|outlaw|elemental|enhancement|"
+            .. "retribution|protpaladin|cat|bear|arcane|fire|frost|affliction|demonology|destruction|bm|mm|survival|shadow")
     end
     Evaluate()
 end

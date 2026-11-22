@@ -3,15 +3,22 @@
 LevelCoach shows one big glowing icon for the ability to press next, with its keybind. A red icon appears
 when your target's cast can be interrupted, and a row of gold-bordered icons shows your cooldowns when they're ready.
 
-**Supported specs:** Fury and Protection Warrior, Assassination and Combat (Outlaw) Rogue, Enhancement Shaman,
-Retribution and Protection Paladin, and Feral (cat) and Bear Druid. On any other class or spec, LevelCoach
-stays hidden and does nothing.
+**Supported specs:** Fury and Protection Warrior, Assassination and Combat (Outlaw) Rogue, Elemental and Enhancement Shaman,
+Retribution and Protection Paladin, Feral (cat) and Bear Druid, Arcane, Fire and Frost Mage, Affliction,
+Demonology and Destruction Warlock, Beast Mastery, Marksmanship and Survival Hunter, and Shadow Priest.
+On any other class or spec (healers, Arms, Subtlety, Balance), LevelCoach stays hidden and does nothing.
+Only your own class's rotations are loaded; on an unsupported class the addon switches itself off completely.
 
 **How it picks your spec:** it uses the talent tree with the most points and follows dual spec.
 Druids get the bear rotation in Bear Form and the cat rotation otherwise. Before you have talent points it
-uses Fury, Assassination, Enhancement or Retribution. A Druid uses cat (or caster/bear before Cat Form).
+uses Fury, Assassination, Enhancement, Retribution, Frost, Affliction, Beast Mastery or Shadow.
+A Druid uses cat (or caster/bear before Cat Form).
 If detection ever picks wrong, force it with `/lc spec fury` (or `protwarrior`, `assassination`, `outlaw`,
-`enhancement`, `retribution`, `protpaladin`, `cat`, `bear`), and switch back with `/lc spec auto`.
+`elemental`, `enhancement`, `retribution`, `protpaladin`, `cat`, `bear`, `arcane`, `fire`, `frost`,
+`affliction`, `demo`, `destro`, `bm`, `mm`, `survival`, `shadow`), and switch back with `/lc spec auto`.
+
+Casters and hunters count enemies by the mobs fighting you (nameplates on). To know when a mob reaches
+you in melee, casters need the Attack ability somewhere on an action bar (any bar, even one you hide).
 
 Spells are looked up by name in your spellbook, so it always uses your highest rank and only suggests
 spells you've learned.
@@ -28,10 +35,10 @@ spells you've learned.
 - `/lc lock` / `/lc unlock` lock or unlock the icon's position
 - `/lc scale 1.2` changes the size
 - `/lc cds` turns the cooldown row on or off
-- `/lc swing` turns the swing timer bars (above the icon) on or off
+- `/lc swing` turns the swing timer bars (above the icon) on or off. Not available on Forever (see below).
 - `/lc mode auto|leveling|endgame` sets the rotation. Auto switches to the endgame rotation at level 60, which skips leveling shortcuts like finishing dying mobs early or skipping dots on mobs about to die.
 - `/lc debug` shows which combat data the game hides from addons and the last error
-- `/lc twist` (off by default) turns on seal twisting for Ret (needs Seal of Command, Seal of Righteousness and a weapon of 3.2 speed or slower) and totem twisting for Enhancement (Windfury and Grace of Air Totem). Both cost a lot of mana and pay off mostly in groups.
+- `/lc twist` (off by default) turns on seal twisting for Ret (needs Seal of Command, Seal of Righteousness and a weapon of 3.2 speed or slower) and totem twisting for Enhancement (Windfury and Grace of Air Totem). Both cost a lot of mana and pay off mostly in groups. Seal twisting needs the swing timer, so on Forever only totem twisting works.
 - `/lc keys` turns the keybind text on or off
 - `/lc always` shows it even out of combat
 - `/lc reset` puts the icon back in the default position
@@ -49,6 +56,9 @@ spells you've learned.
   `~45` is a best guess (last real value plus energy regen, minus what you've spent), `30+` means you
   can afford a 30-cost ability but nothing pricier, and `<15` means you're short of your cheapest one.
   `/lc debug` lists what's hidden.
+- Forever doesn't let addons read the combat log, so there is no swing timer there: `/lc swing` shows nothing,
+  Ret seal twisting is off, and Fury doesn't suggest Slam (it needs the swing timer to fit Slam between swings).
+  All three work on the Classic Era client.
 - There's no question-mark icon any more. When nothing can be suggested, the icon shows your spec's core
   ability dimmed (for example Bloodthirst or Heroic Strike for Fury, Shield Slam or Sunder Armor for
   Protection, Sinister Strike for Combat), or auto attack if you don't know any of them yet.

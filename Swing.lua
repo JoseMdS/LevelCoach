@@ -39,7 +39,7 @@ function ns.SwingActive()
 end
 
 local playerGUID
-local f = CreateFrame("Frame")
+local f = ns.CoreFrame()
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 -- Clients with Blizzard's combat-data restrictions ("secret values", which WoW Forever has) don't let
 -- addons use the combat log: registering it is what triggers "blocked from an action only available to

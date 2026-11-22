@@ -16,6 +16,7 @@ ns.playerClass = playerClass
 --   class = "WARRIOR", tree = 2, name = "Fury",
 --   default = true,            -- used when you have no talent points yet (below level 10)
 --   when = function() ... end, -- optional extra condition (e.g. Bear Form for the bear spec)
+--   ranged = true,                      -- caster/hunter: assume not in melee when unsure, count enemies by threat
 --   melee = { "Heroic Strike" },        -- spells used to test melee range (first known wins)
 --   filler = { "Bloodthirst" },         -- core ability shown dimmed when nothing else can be suggested
 --   interrupt = "Pummel",               -- red side icon when the target's cast can be stopped
@@ -24,6 +25,22 @@ ns.playerClass = playerClass
 --   next = function() return "Spell Name" or nil end,
 -- }
 ns.specs = {}
+
+-- Event frames created by the core. When your class has no specs, Display shuts all of them down so
+-- the addon costs nothing. Spec files return on their first line for other classes, so only your
+-- class's rotations are ever built.
+ns.coreFrames = {}
+function ns.CoreFrame()
+    local f = CreateFrame("Frame")
+    ns.coreFrames[#ns.coreFrames + 1] = f
+    return f
+end
+function ns.Shutdown()
+    for _, f in ipairs(ns.coreFrames) do
+        f:UnregisterAllEvents()
+        f:SetScript("OnEvent", nil)
+    end
+end
 
 function ns.RegisterSpec(def)
     ns.specs[def.class] = ns.specs[def.class] or {}
@@ -37,6 +54,10 @@ ns.TREES = {
     SHAMAN  = { "Elemental", "Enhancement", "Restoration" },
     PALADIN = { "Holy", "Protection", "Retribution" },
     DRUID   = { "Balance", "Feral", "Restoration" },
+    MAGE    = { "Arcane", "Fire", "Frost" },
+    WARLOCK = { "Affliction", "Demonology", "Destruction" },
+    HUNTER  = { "Beast Mastery", "Marksmanship", "Survival" },
+    PRIEST  = { "Discipline", "Holy", "Shadow" },
 }
 
 -- Points spent in each talent tree for the active talent group (dual spec aware).
@@ -58,6 +79,18 @@ ns.SIGNATURE = {
     DRUID   = { { "Moonkin Form", "Insect Swarm" },
                 { "Feral Charge", "Primal Bite", "Lacerate", "Shifting Power" },
                 { "Swiftmend" } },
+    MAGE    = { { "Presence of Mind", "Arcane Power" },
+                { "Pyroblast", "Blast Wave", "Combustion" },
+                { "Ice Barrier", "Cold Snap", "Ice Block" } },
+    WARLOCK = { { "Siphon Life", "Amplify Curse", "Curse of Exhaustion", "Dark Pact" },
+                { "Fel Domination", "Demonic Sacrifice", "Soul Link" },
+                { "Shadowburn", "Conflagrate" } },
+    HUNTER  = { { "Intimidation", "Bestial Wrath" },
+                { "Aimed Shot", "Scatter Shot", "Trueshot Aura" },
+                { "Counterattack", "Deterrence", "Wyvern Sting" } },
+    PRIEST  = { { "Power Infusion", "Inner Focus", "Divine Spirit" },
+                { "Holy Nova", "Lightwell", "Spirit of Redemption" },
+                { "Shadowform", "Mind Flay", "Vampiric Embrace", "Silence" } },
 }
 
 local function SafeNum(v) if type(v) == "number" and not (issecretvalue and issecretvalue(v)) then return v end end
@@ -279,6 +312,19 @@ ns.DUR = {
     ["Blessing of Sanctuary"] = 300, ["Judgement of the Crusader"] = 10,
     ["Rake"] = 9, ["Rip"] = 12, ["Moonfire"] = 12, ["Faerie Fire (Feral)"] = 40, ["Faerie Fire"] = 40,
     ["Demoralizing Roar"] = 30, ["Lacerate"] = 15, ["Mark of the Wild"] = 1800, ["Thorns"] = 600,
+    -- Mage
+    ["Arcane Intellect"] = 1800, ["Frost Armor"] = 1800, ["Ice Armor"] = 1800, ["Mage Armor"] = 1800,
+    ["Ice Barrier"] = 60,
+    -- Warlock
+    ["Corruption"] = 18, ["Curse of Agony"] = 24, ["Bane of Agony"] = 24, ["Immolate"] = 15, ["Siphon Life"] = 30,
+    ["Demon Skin"] = 1800, ["Demon Armor"] = 1800,
+    -- Hunter
+    ["Hunter's Mark"] = 120, ["Serpent Sting"] = 15, ["Wing Clip"] = 10,
+    ["Aspect of the Hawk"] = 1e9, ["Aspect of the Monkey"] = 1e9, ["Trueshot Aura"] = 1e9,
+    -- Priest
+    ["Shadow Word: Pain"] = 18, ["Devouring Plague"] = 24, ["Vampiric Embrace"] = 60,
+    ["Power Word: Fortitude"] = 1800, ["Inner Fire"] = 600, ["Power Word: Shield"] = 30, ["Renew"] = 15,
+    ["Shadowform"] = 1e9,
 }
 local function DurFor(name)
     if ns.DUR[name] then return ns.DUR[name] end
@@ -327,7 +373,7 @@ local function RebuildSlots()
 end
 function ns.SlotFor(name) return slotOf[name] end
 
-local tracker = CreateFrame("Frame")
+local tracker = ns.CoreFrame()
 tracker:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 tracker:RegisterEvent("PLAYER_TARGET_CHANGED")
 tracker:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -339,6 +385,21 @@ tracker:SetScript("OnEvent", function(_, event, unit, _, spellID)
         local name = SpellName(spellID)
         if not name or Secret(name) then return end
         local now = GetTime()
+        -- Paladin seals (for the hidden-auras fallback): only one seal is active at a time, and
+        -- Judgement consumes it. Judging Seal of the Crusader puts its debuff on the target.
+        if name:find("^Seal of") or name == "Judgement" then
+            local active, activeAt = nil, 0
+            for seal, t in pairs(lastCast) do
+                if seal:find("^Seal of") then
+                    if Tracked(seal) and t > activeAt then active, activeAt = seal, t end
+                    lastCast[seal] = nil
+                end
+            end
+            if name == "Judgement" and active == "Seal of the Crusader" then
+                lastCast["Judgement of the Crusader"] = now
+                castCount["Judgement of the Crusader"] = (castCount["Judgement of the Crusader"] or 0) + 1
+            end
+        end
         lastCast[name] = now
         castCount[name] = (castCount[name] or 0) + 1
         if name ~= "Attack" and name ~= "Auto Shot" then ns.lastAnyCast = now end
@@ -573,7 +634,8 @@ end
 function ns.Buff(name)
     local found, count = FindAura("player", name, "HELPFUL")
     if found then return math.max(count or 1, 1) end
-    if Tracked(name) then return 1 end
+    -- Only guess from your casts when the game hides auras; false means we saw it isn't there.
+    if found == nil and Tracked(name) then return 1 end
     return nil
 end
 function ns.HasBuff(name) return ns.Buff(name) ~= nil end
@@ -585,7 +647,8 @@ function ns.HasAnyBuff(list)
 end
 -- Partial-name match, e.g. any "Seal of" or any "Aura"
 function ns.HasBuffLike(pattern)
-    if ScanLike("player", pattern, "HELPFUL") then return true end
+    local found = ScanLike("player", pattern, "HELPFUL")
+    if found ~= nil then return found end
     for name in pairs(lastCast) do
         if name:find(pattern) and Tracked(name) then return true end
     end
@@ -599,15 +662,16 @@ function ns.Debuff(name, unit)
         if not expiration or expiration == 0 then return 999, math.max(count, 1) end
         return math.max(0, expiration - GetTime()), math.max(count, 1)
     end
-    -- Fallback: cast on this target recently?
-    if (castCount[name] or 0) > 0 and Tracked(name) then
+    -- Fallback (auras hidden only): cast on this target recently?
+    if found == nil and (castCount[name] or 0) > 0 and Tracked(name) then
         return DurFor(name) - ns.SinceCast(name), math.min(castCount[name], 5)
     end
     return 0, 0
 end
 -- Anyone's debuff on the target (e.g. Sunder Armor or Demoralizing Shout from a group member)
 function ns.TargetHasDebuff(name)
-    if FindAura("target", name, "HARMFUL") then return true end
+    local found = FindAura("target", name, "HARMFUL")
+    if found ~= nil then return found end
     return (castCount[name] or 0) > 0 and Tracked(name)
 end
 
@@ -647,7 +711,7 @@ local function Remember(kind)
     return v
 end
 
-local spendWatch = CreateFrame("Frame")
+local spendWatch = ns.CoreFrame()
 spendWatch:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 spendWatch:SetScript("OnEvent", function(_, _, unit, _, spellID)
     if unit ~= "player" or Secret(spellID) or not spellID then return end
@@ -772,7 +836,7 @@ function ns.InCombat()
     if lock ~= nil then return lock end
     return inCombatEvt
 end
-local combatFrame = CreateFrame("Frame")
+local combatFrame = ns.CoreFrame()
 combatFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 combatFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 combatFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
@@ -816,11 +880,29 @@ function ns.InMelee(unit)
         if ok then close = Clean(close, "range") else close = nil end
         if close ~= nil then return close and true or false end
     end
-    return true
+    -- Unknown: melee specs assume they're in melee, casters and hunters assume they aren't.
+    return not (ns.current and ns.current.ranged)
 end
 
 -- Hostile enemies in melee range, counted from nameplates (turn enemy nameplates on with V).
+-- Ranged specs: enemies fighting you (on your threat table), wherever they stand.
+local function EngagedEnemies()
+    if not C_NamePlate then return 1 end
+    local count = 0
+    for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
+        local unit = plate.namePlateUnitToken or (plate.UnitFrame and plate.UnitFrame.unit)
+        if unit and Clean(UnitCanAttack("player", unit), "target") and not Clean(UnitIsDead(unit), "target") then
+            local engaged
+            if UnitThreatSituation then engaged = Clean(UnitThreatSituation("player", unit), "target") ~= nil
+            else engaged = Clean(UnitAffectingCombat(unit), "target") end
+            if engaged then count = count + 1 end
+        end
+    end
+    return math.max(count, 1)
+end
+
 function ns.Enemies()
+    if ns.current and ns.current.ranged then return EngagedEnemies() end
     local probe = MeleeProbe()
     if not probe or not C_NamePlate then return 1 end
     local count = 0
@@ -855,6 +937,28 @@ end
 function ns.TotemName(slot)
     if not GetTotemInfo then return nil end
     return Clean(select(2, GetTotemInfo(slot)), "totems")
+end
+
+-- Pets (hunter, warlock). Hidden counts as "you have a living pet".
+function ns.PetDead() return Clean(UnitIsDead("pet"), "other") == true end
+function ns.HasPet()
+    local e = Clean(UnitExists("pet"), "other")
+    if e == nil then return true end
+    return e and not ns.PetDead()
+end
+
+-- Wand (and Auto Shot): returns the spell while it's already repeating, so the icon says "keep going".
+function ns.AutoRepeat(name)
+    if not ns.Known(name) then return nil end
+    if IsAutoRepeatSpell and Clean(IsAutoRepeatSpell(name), "other") then return name end
+    if ns.Ready(name) then return name end
+end
+function ns.Wand() return ns.AutoRepeat("Shoot") end
+
+-- Soul Shards in your bags (warlock); nil when unknown
+function ns.SoulShards()
+    local n = GetItemCount and GetItemCount(6265)
+    return Clean(n, "other")
 end
 
 ---------------------------------------------------------------------------

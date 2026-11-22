@@ -1,8 +1,8 @@
 ## Interface: 16001, 11507
 ## Title: |cffff8000LevelCoach|r - Leveling Rotation Helper (WoW Forever)
-## Notes: Shows an icon for your best next ability while leveling. Fury/Prot Warrior, Assassination/Combat Rogue, Enhancement Shaman, Ret/Prot Paladin, Feral/Guardian Druid.
+## Notes: Shows an icon for your best next ability while leveling. Fury/Prot Warrior, Assassination/Combat Rogue, Elemental/Enhancement Shaman, Ret/Prot Paladin, Feral/Guardian Druid, Arcane/Fire/Frost Mage, Affliction/Demonology/Destruction Warlock, Beast Mastery/Marksmanship/Survival Hunter, Shadow Priest.
 ## Author: José
-## Version: 3.1.0
+## Version: 3.1.1
 ## SavedVariables: LevelCoachDB
 
 Core.lua
@@ -11,9 +11,14 @@ Specs\WarriorFury.lua
 Specs\WarriorProtection.lua
 Specs\RogueAssassination.lua
 Specs\RogueCombat.lua
+Specs\ShamanElemental.lua
 Specs\ShamanEnhancement.lua
 Specs\PaladinRetribution.lua
 Specs\PaladinProtection.lua
 Specs\DruidFeral.lua
 Specs\DruidGuardian.lua
+Specs\Mage.lua
+Specs\Warlock.lua
+Specs\Hunter.lua
+Specs\PriestShadow.lua
 Display.lua

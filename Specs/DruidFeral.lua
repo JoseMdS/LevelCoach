@@ -1,4 +1,5 @@
 local _, ns = ...
+if ns.playerClass ~= "DRUID" then return end -- other classes never build this spec
 local Ready, ReadyAny, Known, HasBuff = ns.Ready, ns.ReadyAny, ns.Known, ns.HasBuff
 
 -- Shared druid helpers (also used by the bear file)

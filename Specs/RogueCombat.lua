@@ -1,4 +1,5 @@
 local _, ns = ...
+if ns.playerClass ~= "ROGUE" then return end -- other classes never build this spec
 local Ready, ReadyAny, Known, HasBuff = ns.Ready, ns.ReadyAny, ns.Known, ns.HasBuff
 
 -- Combat ("Outlaw") Rogue: Sinister Strike builder, Slice and Dice always up, Eviscerate at 5 points.
