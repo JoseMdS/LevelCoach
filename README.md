@@ -72,3 +72,7 @@ spells you've learned.
 - Classic poisons are items, not spells, so the Rogue rotation doesn't remind you to apply them.
 - Adding a spec: create `Specs/<Class><Spec>.lua` that calls `ns.RegisterSpec{...}` (copy an existing one)
   and list it in `LevelCoach.toc` before `Display.lua`.
+
+## Dokumentation
+
+Design (LLD), beslut (ADR) och krav finns i [`docs/`](docs/index.md) och i [issues](https://github.com/JoseMdS/LevelCoach/issues). Arbetssättet beskrivs i [dev-portal](https://github.com/JoseMdS/dev-portal).

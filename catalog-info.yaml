@@ -1,0 +1,20 @@
+# Registreras i Backstage via dev-portal/catalog/all.yaml.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: levelcoach
+  title: "LevelCoach"
+  description: "Rotationshjälp för leveling i WoW Forever: en ikon med nästa förmåga, avbrottsvarning och redo-cooldowns för de flesta DPS- och tank-specs."
+  annotations:
+    github.com/project-slug: JoseMdS/LevelCoach
+    backstage.io/techdocs-ref: dir:.
+  tags: [lua, wow-addon, wow-forever]
+  links:
+    - url: https://github.com/JoseMdS/LevelCoach/issues
+      title: Krav och user stories
+      icon: docs
+spec:
+  type: library
+  lifecycle: production
+  owner: user:josemds
+  system: forever-addons
